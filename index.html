@@ -1539,10 +1539,14 @@
 
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            canvas.width = 600;
-            canvas.height = 200;
 
-            ctx.font = 'bold 72px "STXingkai", "华文行楷", "行楷", cursive';
+            // 手机上使用更紧凑的画布和更大字号，让字在屏幕上的占比更大
+            const isNarrow = window.innerWidth < 500;
+            canvas.width = isNarrow ? 420 : 600;
+            canvas.height = isNarrow ? 160 : 200;
+            const fontSize = isNarrow ? 82 : 72;
+
+            ctx.font = `bold ${fontSize}px "STXingkai", "华文行楷", "行楷", cursive`;
             ctx.fillStyle = '#000';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -1564,14 +1568,18 @@
             }
 
             const containerRect = container.getBoundingClientRect();
-            const scaleX = containerRect.width / canvas.width;
-            const scaleY = containerRect.height / canvas.height;
+            // 等比缩放：取宽高缩放系数中较小的一个，保持文字原始形状不变形
+            const scale = Math.min(containerRect.width / canvas.width, containerRect.height / canvas.height);
+            // 居中偏移：缩放后剩余空间平分到四周
+            const offsetX = (containerRect.width - canvas.width * scale) / 2;
+            const offsetY = (containerRect.height - canvas.height * scale) / 2;
 
             particles.forEach((pos, index) => {
                 const particle = document.createElement('div');
                 particle.className = 'text-particle';
 
-                const size = gap * 0.8;
+                // 粒子尺寸随缩放系数同步缩放，手机上字小粒子也小，笔画更细腻
+                const size = Math.max(2, gap * 0.8 * scale);
                 particle.style.width = size + 'px';
                 particle.style.height = size + 'px';
                 particle.style.borderRadius = '1px';
@@ -1584,8 +1592,8 @@
                 particle.style.left = startX + 'px';
                 particle.style.top = startY + 'px';
 
-                const targetX = pos.x * scaleX;
-                const targetY = pos.y * scaleY;
+                const targetX = pos.x * scale + offsetX;
+                const targetY = pos.y * scale + offsetY;
 
                 container.appendChild(particle);
 
