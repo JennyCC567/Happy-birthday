@@ -600,6 +600,43 @@
             .poem-card.horizontal .poem-title { font-size: 28px; margin-bottom: 16px; }
         }
 
+        /* 手机端：诗歌横排改回竖排，图缩小、文字居中，保证按钮不被挤出屏幕 */
+        @media (max-width: 700px) {
+            .poem-card.horizontal {
+                flex-direction: column;
+                gap: 0;
+                padding-top: 9vh;
+                justify-content: flex-start;
+            }
+            .poem-card.horizontal .poem-index {
+                position: static;
+                transform: none;
+                margin-bottom: 8px;
+            }
+            .poem-card.horizontal .poem-art {
+                transform: scale(0.6);
+                margin: -28px 0 -34px 0; /* 抵消缩放后留下的空白 */
+                flex-shrink: 0;
+            }
+            .poem-text {
+                align-items: center;
+                max-width: 100%;
+            }
+            .poem-card.horizontal .poem-title {
+                text-align: center;
+                font-size: 27px;
+                margin-bottom: 12px;
+            }
+            .poem-card.horizontal .poem-body {
+                text-align: center;
+                font-size: 15px;
+                line-height: 1.9;
+                letter-spacing: 2px;
+            }
+            .poem-card.horizontal .poem-body .stanza + .stanza { margin-top: 8px; }
+            .poem-card.horizontal .poem-next-btn { margin-top: 18px; }
+        }
+
         /* 页码指示（学习原视频的 "0X —— 0X" 样式） */
         .poem-progress {
             position: absolute;
@@ -1429,6 +1466,24 @@
 
         // ========== 背景音乐控制 ==========
         let musicPlayed = false;
+        let audioUnlocked = false;
+
+        // 手机浏览器的自动播放限制：必须在用户手势内先激活音频元素
+        // 在"拆开惊喜"的点击里调用，之后到吹蜡烛环节就能正常出声
+        function unlockAudio() {
+            if (audioUnlocked) return;
+            const audio = document.getElementById('bgMusic');
+            const p = audio.play();
+            if (p !== undefined) {
+                p.then(() => {
+                    // 激活成功后立刻暂停归零，等吹蜡烛时再正式播放
+                    audio.pause();
+                    audio.currentTime = 0;
+                    audioUnlocked = true;
+                    console.log('🔊 音频已解锁');
+                }).catch(() => {});
+            }
+        }
 
         function playBirthdayMusic() {
             if (musicPlayed) return;
@@ -1555,6 +1610,9 @@
 
             // 防止重复触发
             if (introScreen.classList.contains('hidden')) return;
+
+            // ⓪ 借这次用户点击解锁音频（手机自动播放限制）
+            unlockAudio();
 
             // ① 拆开礼物的瞬间：金色礼花从按钮处绽放
             try {
