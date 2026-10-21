@@ -1,0 +1,1792 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>生日快乐</title>
+    <!-- 引入 canvas-confetti 烟花库 -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: #0a0a12;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* ===== 第一阶段：开屏动画 ===== */
+        #intro-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #0a0a12 0%, #12121a 50%, #0a0a12 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: opacity 1s ease-out;
+        }
+
+        #intro-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* 开屏离场：内容向后收起，像礼物盒盖合上 */
+        #intro-screen.leaving .intro-title {
+            animation: giftClose 1.2s ease-in forwards;
+        }
+        #intro-screen.leaving .golden-button,
+        #intro-screen.leaving .skip-btn {
+            animation: giftBtnOut 0.9s ease-in forwards;
+        }
+
+        @keyframes giftClose {
+            0%   { opacity: 1; transform: scale(1); filter: blur(0); }
+            100% { opacity: 0; transform: scale(1.15); filter: blur(6px); }
+        }
+
+        @keyframes giftBtnOut {
+            0%   { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(0.5) translateY(40px); }
+        }
+
+        .stars {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .star {
+            position: absolute;
+            background: #fff;
+            border-radius: 50%;
+            animation: twinkle 2s ease-in-out infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        .confetti-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .confetti {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.8);
+            opacity: 0;
+            animation: confettiFall 4s ease-out forwards;
+        }
+
+        @keyframes confettiFall {
+            0% { opacity: 0; transform: translateY(-100px) rotate(0deg) scale(0); }
+            20% { opacity: 1; }
+            100% { opacity: 0.6; transform: translateY(100vh) rotate(720deg) scale(1); }
+        }
+
+        .intro-title {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            opacity: 0;
+            animation: fadeInUp 1.5s ease-out 1s forwards;
+        }
+
+        .intro-subtitle {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.5);
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+
+        .intro-name {
+            font-family: Georgia, serif;
+            font-size: 64px;
+            font-style: italic;
+            font-weight: 300;
+            color: #fff;
+            margin-bottom: 15px;
+            text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+        }
+
+        .intro-message {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.8);
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+        }
+
+        .intro-hint {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.4);
+            margin-top: 40px;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .golden-button {
+            position: relative;
+            z-index: 2;
+            margin-top: 50px;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #d4af37 0%, #f4e5b0 50%, #d4af37 100%);
+            border: none;
+            border-radius: 50px;
+            color: #0a0a12;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            opacity: 0;
+            animation: fadeInUp 1.5s ease-out 2s forwards, pulse 2s ease-in-out infinite 3.5s;
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.4);
+            transition: transform 0.3s ease;
+        }
+
+        .golden-button:hover { transform: scale(1.05); }
+        .golden-button::before { content: '✦'; margin-right: 8px; }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 4px 20px rgba(212, 175, 55, 0.4); }
+            50% { box-shadow: 0 4px 35px rgba(212, 175, 55, 0.7); }
+        }
+
+        .skip-btn {
+            position: absolute;
+            bottom: 120px;
+            right: 40px;
+            z-index: 2;
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 14px;
+            cursor: pointer;
+            opacity: 0;
+            animation: fadeInUp 1.5s ease-out 2.5s forwards;
+        }
+        .skip-btn::after { content: ' ↗'; }
+
+        /* ===== 第二阶段：碎片组合文字 ===== */
+        #message-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #0a0a12 0%, #12121a 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1s ease-in;
+        }
+
+        #message-screen.active { opacity: 1; pointer-events: auto; }
+        #message-screen.hidden { opacity: 0; pointer-events: none; }
+
+        .particle-text-container {
+            position: relative;
+            width: 90%;
+            max-width: 600px;
+            height: 200px;
+            margin-bottom: 60px;
+        }
+
+        .target-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 72px;
+            font-weight: bold;
+            color: transparent;
+            opacity: 0;
+            white-space: nowrap;
+        }
+
+        .text-particle {
+            position: absolute;
+            background: #fff;
+            opacity: 0;
+            transition: all 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        .text-particle.assembled { opacity: 1; }
+
+        .assembly-hint {
+            font-family: "STKaiti", "KaiTi", "楷体", serif;
+            font-size: 17px;
+            color: rgba(255, 255, 255, 0.6);
+            opacity: 0;
+            animation: fadeInUp 1s ease-out 3s forwards;
+            letter-spacing: 2px;
+        }
+
+        .next-button {
+            margin-top: 40px;
+            padding: 13px 38px;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 30px;
+            color: rgba(255, 255, 255, 0.85);
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+            font-size: 15px;
+            cursor: pointer;
+            opacity: 0;
+            animation: fadeInUp 1s ease-out 4s forwards;
+            transition: all 0.3s ease;
+            letter-spacing: 1px;
+        }
+        .next-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.6);
+            transform: translateY(-2px);
+        }
+
+        /* ===== 第二点五阶段：诗歌滑动页 ===== */
+        #poem-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 6;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1s ease-in;
+            background: linear-gradient(180deg, #0a0a12 0%, #101018 100%);
+        }
+
+        #poem-screen.active { opacity: 1; pointer-events: auto; }
+        #poem-screen.hidden { opacity: 0; pointer-events: none; }
+
+        /* 垂直整页翻页容器（学习原视频的滑动方式） */
+        .poem-scroll {
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+        }
+        .poem-scroll::-webkit-scrollbar { display: none; }
+
+        .poem-card {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0 8%;
+            overflow: hidden;
+        }
+
+        /* 卡片内元素依次浮现 */
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 1.2s ease-out, transform 1.2s ease-out;
+        }
+        .poem-card.visible .reveal { opacity: 1; transform: translateY(0); }
+        .poem-card.visible .reveal:nth-child(2) { transition-delay: 0.3s; }
+        .poem-card.visible .reveal:nth-child(3) { transition-delay: 0.7s; }
+        .poem-card.visible .reveal:nth-child(4) { transition-delay: 1.1s; }
+
+        /* 章节编号（学习原视频的 "03 | 标题" 样式） */
+        .poem-index {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.45);
+            letter-spacing: 2px;
+            margin-bottom: 35px;
+        }
+        .poem-index::after {
+            content: '';
+            width: 32px;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* 配图容器 */
+        .poem-art {
+            position: relative;
+            width: 200px;
+            height: 160px;
+            margin-bottom: 40px;
+        }
+
+        /* ===== 场景一：云中月 ===== */
+        .art-moon-crescent {
+            position: absolute;
+            top: 20px;
+            left: 60px;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #fff8dc 0%, #ffe9a8 45%, #e8c96a 100%);
+            box-shadow: 0 0 40px rgba(255, 233, 168, 0.5), 0 0 90px rgba(255, 233, 168, 0.25);
+        }
+        .art-moon-crescent::after {
+            content: '';
+            position: absolute;
+            top: -12px;
+            left: 28px;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #0d0d16; /* 遮出月牙 */
+        }
+        .art-cloud {
+            position: absolute;
+            height: 14px;
+            border-radius: 10px;
+            background: linear-gradient(90deg, rgba(180,180,210,0), rgba(180,180,210,0.35), rgba(180,180,210,0));
+            animation: cloudDrift 9s ease-in-out infinite alternate;
+        }
+        .art-cloud.c1 { top: 40px; left: 0; width: 130px; }
+        .art-cloud.c2 { top: 85px; right: 0; width: 100px; animation-delay: -4s; }
+        @keyframes cloudDrift {
+            from { transform: translateX(-15px); opacity: 0.6; }
+            to   { transform: translateX(15px); opacity: 1; }
+        }
+
+        /* ===== 场景二：荷塘月色 ===== */
+        .art-pond {
+            position: absolute;
+            bottom: 0;
+            left: -30px;
+            right: -30px;
+            height: 70px;
+            background: linear-gradient(180deg, rgba(40,60,90,0.5) 0%, rgba(20,30,55,0.9) 100%);
+            border-radius: 50% 50% 0 0 / 18px 18px 0 0;
+        }
+        .art-pond::before {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 55px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 233, 168, 0.55); /* 月的倒影 */
+            filter: blur(4px);
+            animation: ripple 4s ease-in-out infinite;
+        }
+        @keyframes ripple {
+            0%, 100% { transform: translateX(-50%) scaleX(1); opacity: 0.55; }
+            50% { transform: translateX(-50%) scaleX(1.3); opacity: 0.35; }
+        }
+        .art-lotus {
+            position: absolute;
+            bottom: 55px;
+            width: 34px;
+            height: 30px;
+            z-index: 2;
+        }
+        .art-lotus::before, .art-lotus::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            width: 16px;
+            height: 28px;
+            background: radial-gradient(circle at 50% 100%, #e8a0b4 0%, #b45c78 70%, #8b3a56 100%);
+            border-radius: 60% 60% 8% 8%;
+        }
+        .art-lotus::before { left: 1px; transform: rotate(-22deg); transform-origin: bottom; }
+        .art-lotus::after { right: 1px; transform: rotate(22deg); transform-origin: bottom; }
+        .art-lotus .center {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 15px;
+            height: 32px;
+            background: radial-gradient(circle at 50% 100%, #f7c6d4 0%, #d47894 100%);
+            border-radius: 60% 60% 8% 8%;
+            z-index: 1;
+        }
+        .art-lotus .stem {
+            position: absolute;
+            bottom: -26px;
+            left: 50%;
+            width: 2px;
+            height: 28px;
+            background: rgba(90, 140, 100, 0.8);
+        }
+        .art-lotus.l1 { left: 30px; }
+        .art-lotus.l2 { right: 40px; transform: scale(0.8); }
+        .art-lily {
+            position: absolute;
+            bottom: 28px;
+            width: 44px;
+            height: 14px;
+            border-radius: 50%;
+            background: radial-gradient(ellipse at center, rgba(60,110,80,0.85) 0%, rgba(30,60,45,0.9) 100%);
+        }
+        .art-lily.y1 { left: 10px; }
+        .art-lily.y2 { right: 15px; width: 34px; }
+
+        /* ===== 场景三：桂树明月 ===== */
+        .art-fullmoon {
+            position: absolute;
+            top: 5px;
+            right: 25px;
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 38%, #fffdf2 0%, #ffefb8 50%, #e3c06a 100%);
+            box-shadow: 0 0 50px rgba(255, 240, 180, 0.55), 0 0 110px rgba(255, 240, 180, 0.25);
+        }
+        .art-branch {
+            position: absolute;
+            bottom: 10px;
+            left: 0;
+            width: 130px;
+            height: 120px;
+        }
+        .art-branch .twig {
+            position: absolute;
+            bottom: 0;
+            left: 10px;
+            width: 110px;
+            height: 4px;
+            border-radius: 3px;
+            background: #3a2e28;
+            transform: rotate(-18deg);
+        }
+        .art-branch .osmanthus {
+            position: absolute;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #ffd98a 0%, #e8a53a 100%);
+            box-shadow: 0 0 6px rgba(232, 165, 58, 0.6);
+        }
+        .art-branch .osmanthus:nth-child(2) { top: 28px; left: 30px; }
+        .art-branch .osmanthus:nth-child(3) { top: 14px; left: 62px; }
+        .art-branch .osmanthus:nth-child(4) { top: 40px; left: 84px; }
+        .art-branch .osmanthus:nth-child(5) { top: 52px; left: 45px; }
+        .art-branch .osmanthus:nth-child(6) { top: 22px; left: 100px; }
+        .art-branch .leaf {
+            position: absolute;
+            width: 22px;
+            height: 8px;
+            border-radius: 50% 50% 50% 50% / 80% 20% 80% 20%;
+            background: rgba(70, 110, 80, 0.75);
+        }
+        .art-branch .leaf:nth-child(7) { top: 34px; left: 40px; transform: rotate(-30deg); }
+        .art-branch .leaf:nth-child(8) { top: 48px; left: 70px; transform: rotate(20deg); }
+        .art-branch .leaf:nth-child(9) { top: 20px; left: 85px; transform: rotate(-10deg); }
+
+        /* 诗词文字排版 */
+        .poem-title {
+            font-family: "STKaiti", "KaiTi", "楷体", serif;
+            font-size: 34px;
+            color: rgba(255, 233, 168, 0.95);
+            letter-spacing: 10px;
+            margin-bottom: 30px;
+            text-indent: 10px; /* 抵消最后一个字的字间距 */
+        }
+        .poem-body {
+            font-family: "STKaiti", "KaiTi", "楷体", serif;
+            font-size: 19px;
+            line-height: 2.4;
+            color: rgba(255, 255, 255, 0.88);
+            letter-spacing: 3px;
+            text-align: center;
+            max-width: 420px;
+        }
+        .poem-body .stanza + .stanza { margin-top: 18px; }
+        .poem-note {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.4);
+            letter-spacing: 2px;
+            margin-top: 28px;
+            font-style: italic;
+        }
+
+        /* ===== 横排布局：图在左、诗在右（用于长诗卡片）===== */
+        .poem-card.horizontal {
+            flex-direction: row;
+            justify-content: center;
+            gap: 55px;
+            padding: 0 6%;
+        }
+        .poem-card.horizontal .poem-art {
+            margin-bottom: 0;
+            flex-shrink: 0;
+            align-self: center;
+        }
+        .poem-card.horizontal .poem-index {
+            position: absolute;
+            top: 12%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 0;
+        }
+        .poem-text {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            max-width: 560px;
+        }
+        .poem-card.horizontal .poem-title {
+            font-size: 33px;
+            margin-bottom: 24px;
+            text-align: left;
+        }
+        .poem-card.horizontal .poem-body {
+            font-size: 18px;
+            line-height: 2.1;
+            letter-spacing: 2.5px;
+            text-align: left;
+            max-width: none;
+        }
+        .poem-card.horizontal .poem-body .stanza + .stanza { margin-top: 16px; }
+        .poem-card.horizontal .poem-next-btn {
+            align-self: center;
+            margin-top: 26px;
+            padding: 11px 32px;
+            font-size: 15px;
+        }
+        /* 横排时右栏内的浮现节奏 */
+        .poem-text .reveal:nth-child(2) { transition-delay: 0.35s; }
+        .poem-text .reveal:nth-child(3) { transition-delay: 0.7s; }
+
+        @media (max-width: 900px) {
+            .poem-card.horizontal { gap: 30px; }
+            .poem-card.horizontal .poem-art { transform: scale(0.78); }
+            .poem-card.horizontal .poem-body { font-size: 16px; line-height: 1.95; }
+            .poem-card.horizontal .poem-title { font-size: 28px; margin-bottom: 16px; }
+        }
+
+        /* 页码指示（学习原视频的 "0X —— 0X" 样式） */
+        .poem-progress {
+            position: absolute;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            letter-spacing: 1px;
+            z-index: 5;
+        }
+        .poem-progress .current { color: rgba(255,255,255,0.9); font-size: 16px; }
+        .poem-progress .line { width: 40px; height: 1px; background: rgba(255,255,255,0.35); position: relative; overflow: hidden; }
+        .poem-progress .line::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 33.33%;
+            background: #ffe9a8;
+            transform: translateX(calc(var(--p, 0) * 100%));
+            transition: transform 0.6s ease;
+        }
+        .poem-progress .total { color: rgba(255,255,255,0.4); }
+
+        /* 滑动提示（学习原视频底部提示） */
+        .poem-hint {
+            position: absolute;
+            bottom: 48px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.45);
+            letter-spacing: 2px;
+            z-index: 5;
+            animation: hintBounce 2s ease-in-out infinite;
+            white-space: nowrap;
+        }
+        @keyframes hintBounce {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(6px); }
+        }
+
+        /* 诗歌页里的继续按钮 */
+        .poem-next-btn {
+            margin-top: 40px;
+            padding: 13px 38px;
+            background: transparent;
+            border: 1px solid rgba(255, 233, 168, 0.4);
+            border-radius: 30px;
+            color: rgba(255, 233, 168, 0.9);
+            font-family: "STKaiti", "KaiTi", "楷体", serif;
+            font-size: 16px;
+            letter-spacing: 3px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .poem-next-btn:hover {
+            background: rgba(255, 233, 168, 0.1);
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .poem-title { font-size: 28px; letter-spacing: 7px; }
+            .poem-body { font-size: 16px; letter-spacing: 2px; }
+            .poem-art { transform: scale(0.85); margin-bottom: 25px; }
+        }
+
+        /* ===== 第三阶段：吹蜡烛（重新设计布局）===== */
+        #candle-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #0a0a12 0%, #1a1a24 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 5;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1.5s ease-in;
+            padding-top: 10vh;
+        }
+
+        #candle-screen.active { opacity: 1; pointer-events: auto; }
+
+        /* 顶部引导语 */
+        .candle-text {
+            font-family: "STKaiti", "KaiTi", "楷体", serif;
+            font-size: 24px;
+            color: rgba(255, 255, 255, 0.85);
+            margin-bottom: 50px;
+            letter-spacing: 4px;
+            font-weight: 300;
+            text-align: center;
+        }
+
+        /* 蛋糕容器 */
+        .cake-container {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            flex-shrink: 0;
+        }
+
+        /* 蛋糕主体 - 更精美的设计 */
+        .cake {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 240px;
+            height: 150px;
+            background: linear-gradient(180deg, #fff9f0 0%, #fff5e6 30%, #ffe8d6 100%);
+            border-radius: 20px 20px 45px 45px;
+            box-shadow:
+                0 10px 40px rgba(0, 0, 0, 0.3),
+                inset 0 -5px 15px rgba(255, 200, 150, 0.2),
+                inset 0 5px 15px rgba(255, 255, 255, 0.8);
+            overflow: visible;
+        }
+
+        /* 奶油顶层 */
+        .cake::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 35px;
+            background: linear-gradient(180deg, #ffffff 0%, #fff9f5 100%);
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 3px 10px rgba(255, 220, 180, 0.3);
+        }
+
+        /* 奶油花边（顶部） */
+        .cream-border-top {
+            position: absolute;
+            top: 28px;
+            left: -5px;
+            right: -5px;
+            height: 18px;
+            background:
+                radial-gradient(circle at 10px 50%, #ffffff 8px, transparent 9px),
+                radial-gradient(circle at 30px 50%, #ffffff 8px, transparent 9px),
+                radial-gradient(circle at 50px 50%, #ffffff 8px, transparent 9px),
+                radial-gradient(circle at 70px 50%, #ffffff 8px, transparent 9px),
+                radial-gradient(circle at 90px 50%, #ffffff 8px, transparent 9px),
+                radial-gradient(circle at 110px 50%, #ffffff 8px, transparent 9px),
+                radial-gradient(circle at 130px 50%, #ffffff 8px, transparent 9px),
+                radial-gradient(circle at 150px 50%, #ffffff 8px, transparent 9px),
+                radial-gradient(circle at 170px 50%, #ffffff 8px, transparent 9px),
+                radial-gradient(circle at 190px 50%, #ffffff 8px, transparent 9px),
+                radial-gradient(circle at 210px 50%, #ffffff 8px, transparent 9px),
+                radial-gradient(circle at 230px 50%, #ffffff 8px, transparent 9px),
+                radial-gradient(circle at 250px 50%, #ffffff 8px, transparent 9px);
+            background-size: 40px 18px;
+            background-repeat: repeat-x;
+            z-index: 1;
+        }
+
+        /* 水果装饰 - 樱桃 */
+        .cherry {
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background: radial-gradient(circle at 30% 30%, #ff6b8a 0%, #dc143c 50%, #8b0000 100%);
+            border-radius: 50%;
+            box-shadow:
+                0 3px 8px rgba(139, 0, 0, 0.4),
+                inset -2px -2px 6px rgba(0, 0, 0, 0.2),
+                inset 2px 2px 6px rgba(255, 150, 170, 0.5);
+            z-index: 2;
+        }
+        .cherry::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 2px;
+            height: 8px;
+            background: linear-gradient(180deg, #228b22 0%, #006400 100%);
+            border-radius: 1px;
+        }
+        .cherry::after {
+            content: '';
+            position: absolute;
+            top: 25%;
+            left: 25%;
+            width: 6px;
+            height: 6px;
+            background: rgba(255, 200, 200, 0.7);
+            border-radius: 50%;
+        }
+
+        .cherry:nth-child(1) { top: 45px; left: 40px; }
+        .cherry:nth-child(2) { top: 55px; right: 45px; }
+        .cherry:nth-child(3) { top: 80px; left: 50%; transform: translateX(-50%); }
+
+        /* 蓝莓装饰 */
+        .blueberry {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background: radial-gradient(circle at 35% 35%, #7b68ee 0%, #483d8b 60%, #191970 100%);
+            border-radius: 50%;
+            box-shadow:
+                0 2px 6px rgba(25, 25, 112, 0.5),
+                inset -1px -1px 4px rgba(0, 0, 0, 0.3),
+                inset 1px 1px 4px rgba(147, 142, 214, 0.6);
+            z-index: 2;
+        }
+        .blueberry::before {
+            content: '';
+            position: absolute;
+            top: 20%;
+            left: 20%;
+            width: 5px;
+            height: 5px;
+            background: rgba(200, 190, 255, 0.6);
+            border-radius: 50%;
+        }
+
+        .blueberry:nth-child(4) { top: 95px; left: 65px; }
+        .blueberry:nth-child(5) { top: 90px; right: 70px; }
+        .blueberry:nth-child(6) { top: 110px; left: 110px; }
+
+        /* 巧克力碎屑 */
+        .sprinkle {
+            position: absolute;
+            width: 12px;
+            height: 4px;
+            border-radius: 2px;
+            z-index: 2;
+            opacity: 0.9;
+        }
+        .sprinkle:nth-child(7) {
+            top: 60px; left: 85px;
+            background: #ff6b6b;
+            transform: rotate(25deg);
+        }
+        .sprinkle:nth-child(8) {
+            top: 70px; right: 80px;
+            background: #ffd93d;
+            transform: rotate(-15deg);
+        }
+        .sprinkle:nth-child(9) {
+            top: 100px; left: 145px;
+            background: #6bcb77;
+            transform: rotate(45deg);
+        }
+        .sprinkle:nth-child(10) {
+            top: 105px; right: 140px;
+            background: #4d96ff;
+            transform: rotate(-30deg);
+        }
+        .sprinkle:nth-child(11) {
+            top: 75px; left: 120px;
+            background: #ff6b9b;
+            transform: rotate(60deg);
+        }
+        .sprinkle:nth-child(12) {
+            top: 85px; right: 115px;
+            background: #c9b037;
+            transform: rotate(-45deg);
+        }
+
+        /* 奶油花点缀 */
+        .cream-dollop {
+            position: absolute;
+            width: 28px;
+            height: 20px;
+            background: #ffffff;
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            box-shadow: 0 2px 6px rgba(200, 180, 160, 0.3);
+            z-index: 1;
+        }
+        .cream-dollop::before,
+        .cream-dollop::after {
+            content: '';
+            position: absolute;
+            background: #ffffff;
+            border-radius: 50%;
+        }
+        .cream-dollop::before {
+            width: 14px;
+            height: 14px;
+            top: -6px;
+            left: 2px;
+        }
+        .cream-dollop::after {
+            width: 12px;
+            height: 12px;
+            top: -4px;
+            right: 2px;
+        }
+
+        .cream-dollop:nth-child(13) { top: 40px; left: 90px; }
+        .cream-dollop:nth-child(14) { top: 42px; right: 92px; }
+
+        /* 蜡烛 - 在蛋糕上方（不插入蛋糕） */
+        .candle-wrapper {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 2;
+        }
+
+        .candle {
+            width: 20px;
+            height: 80px;
+            background: repeating-linear-gradient(45deg, #ff6b9d, #ff6b9d 5px, #ffffff 5px, #ffffff 10px);
+            border-radius: 3px;
+            position: relative;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 火焰 */
+        .flame-container {
+            position: absolute;
+            top: -35px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 40px;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        .flame {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 35px;
+            background: linear-gradient(180deg, #fff7ad 0%, #ffcc00 30%, #ff6600 70%, #ff3300 100%);
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            animation: flicker 0.3s ease-in-out infinite alternate;
+            box-shadow: 0 0 20px #ffcc00, 0 0 40px #ff6600, 0 0 60px rgba(255, 102, 0, 0.5);
+        }
+
+        .flame.out {
+            opacity: 0;
+            transform: translateX(-50%) scale(0);
+        }
+
+        /* 烟雾 */
+        .smoke {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 15px;
+            height: 15px;
+            background: rgba(200, 200, 200, 0.6);
+            border-radius: 50%;
+            opacity: 0;
+            filter: blur(5px);
+        }
+        .smoke.show { animation: smokeRise 2s ease-out forwards; }
+
+        @keyframes smokeRise {
+            0% { opacity: 0.8; transform: translateX(-50%) translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateX(-50%) translateY(-80px) scale(2.5); }
+        }
+
+        @keyframes flicker {
+            0% { transform: translateX(-50%) scale(1) rotate(-2deg); }
+            100% { transform: translateX(-50%) scale(1.05) rotate(2deg); }
+        }
+
+        /* 蛋糕盘 */
+        .plate {
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 260px;
+            height: 30px;
+            background: linear-gradient(180deg, #f0f0f0 0%, #e0e0e0 100%);
+            border-radius: 50%;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 吹蜡烛提示按钮 */
+        .candle-hint {
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.65);
+            padding: 14px 32px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            animation: gentlePulse 2s ease-in-out infinite;
+            background: rgba(255, 255, 255, 0.03);
+            margin-top: 40px;
+        }
+        .candle-hint:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        .candle-hint::after { content: ' ✧'; }
+
+        @keyframes gentlePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+
+        /* 最终祝福 - 在文档流中，位于蛋糕与按钮之间，绝不会重叠 */
+        .final-blessing {
+            position: static;      /* 不再使用 fixed，参与文档流布局 */
+            text-align: center;
+            opacity: 0;
+            pointer-events: none;
+            width: 100%;
+            max-height: 0;         /* 隐藏时折叠为0高度，不留空隙 */
+            overflow: hidden;
+            margin: 0;
+            transition: max-height 1.2s ease, opacity 1.2s ease, margin 1.2s ease;
+            flex-shrink: 0;
+        }
+
+        .final-blessing.show {
+            opacity: 1;
+            pointer-events: auto;
+            max-height: 150px;     /* 展开显示 */
+            margin: 25px 0 15px 0;
+        }
+
+        .final-blessing h1 {
+            font-family: "STXingkai", "华文行楷", "行楷", cursive;
+            font-size: 68px;
+            font-weight: normal;
+            background: linear-gradient(135deg, #fff 0%, #ffd700 30%, #ffec8b 50%, #ffd700 70%, #fff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 25px;
+            animation: shimmer 3s ease-in-out infinite;
+            background-size: 200% 200%;
+            letter-spacing: 8px;
+            line-height: 1.2;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .final-blessing p {
+            font-family: "STKaiti", "KaiTi", "楷体", serif;
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.85);
+            letter-spacing: 5px;
+            font-weight: 300;
+            margin-top: 10px;
+        }
+
+        .final-blessing .blessing-sub {
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+            font-size: 15px;
+            color: rgba(255, 255, 255, 0.5);
+            letter-spacing: 2px;
+            margin-top: 20px;
+            font-style: italic;
+        }
+
+        /* 烟花 - 从两侧弹出 */
+        .firework {
+            position: fixed;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            opacity: 0;
+            z-index: 50;
+        }
+
+        .firework.left {
+            left: -20px;
+            animation: fireworkFromLeft 1.2s ease-out forwards;
+        }
+
+        .firework.right {
+            right: -20px;
+            animation: fireworkFromRight 1.2s ease-out forwards;
+        }
+
+        @keyframes fireworkFromLeft {
+            0% {
+                opacity: 1;
+                transform: translateX(0) scale(0) rotate(0deg);
+            }
+            30% {
+                opacity: 1;
+                transform: translateX(40vw) scale(1) rotate(180deg);
+            }
+            70% {
+                opacity: 0.8;
+                transform: translateX(45vw) scale(1.2) rotate(270deg);
+            }
+            100% {
+                opacity: 0;
+                transform: translateX(50vw) scale(0.5) rotate(360deg);
+            }
+        }
+
+        @keyframes fireworkFromRight {
+            0% {
+                opacity: 1;
+                transform: translateX(0) scale(0) rotate(0deg);
+            }
+            30% {
+                opacity: 1;
+                transform: translateX(-40vw) scale(1) rotate(-180deg);
+            }
+            70% {
+                opacity: 0.8;
+                transform: translateX(-45vw) scale(1.2) rotate(-270deg);
+            }
+            100% {
+                opacity: 0;
+                transform: translateX(-50vw) scale(0.5) rotate(-360deg);
+            }
+        }
+
+        /* 重新点燃按钮 */
+        .relight-btn {
+            margin-top: 40px;
+            padding: 14px 35px;
+            background: linear-gradient(135deg, #ff6b9d 0%, #ff8e53 100%);
+            border: none;
+            border-radius: 30px;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.4s ease;
+            box-shadow: 0 4px 15px rgba(255, 107, 157, 0.4);
+            letter-spacing: 1px;
+        }
+
+        .relight-btn.show {
+            opacity: 1;
+            pointer-events: auto;
+            animation: fadeInUp 0.8s ease-out forwards;
+        }
+
+        .relight-btn:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 6px 25px rgba(255, 107, 157, 0.6);
+        }
+
+        .relight-btn::before {
+            content: '🕯️ ';
+            margin-right: 6px;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .intro-name { font-size: 48px; }
+            .target-text { font-size: 48px; }
+            .final-blessing h1 { font-size: 48px; letter-spacing: 5px; }
+            .final-blessing p { font-size: 17px; letter-spacing: 3px; }
+            .cake-container { transform: scale(0.85); }
+            .candle-text { font-size: 20px; margin-bottom: 30px; }
+            .candle-hint { font-size: 14px; padding: 12px 24px; margin-top: 25px; }
+            .final-blessing h1 { font-size: 44px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 生日快乐背景音乐 -->
+        <audio id="bgMusic">
+            <source src="music.mp3" type="audio/mpeg">
+        </audio>
+
+        <!-- 第一阶段：开屏动画 -->
+        <div id="intro-screen">
+            <div class="stars" id="stars"></div>
+            <div class="confetti-container" id="confetti"></div>
+
+            <div class="intro-title">
+                <p class="intro-subtitle">叮！你的生日惊喜已送达 🎁</p>
+                <h1 class="intro-name">爸爸</h1>
+                <p class="intro-message">今天你是主角！</p>
+                <p class="intro-hint">戳这里拆开惊喜 →</p>
+            </div>
+
+            <button class="golden-button" onclick="startPoemPhase()">✨ 拆开惊喜</button>
+            <button class="skip-btn" onclick="startPoemPhase()">直接看 →</button>
+        </div>
+
+        <!-- 第二阶段：碎片组合文字 -->
+        <div id="message-screen">
+            <div class="stars" id="stars2"></div>
+            <div class="particle-text-container" id="particleContainer">
+                <div class="target-text" id="targetText">闭上眼睛</div>
+            </div>
+            <p class="assembly-hint">嘘……有话对你说</p>
+            <button class="next-button" onclick="startCandlePhase()" style="display: none;" id="nextBtn">继续 →</button>
+        </div>
+
+        <!-- 第二点五阶段：诗歌滑动页 -->
+        <div id="poem-screen">
+            <div class="stars" id="starsPoem"></div>
+
+            <div class="poem-scroll" id="poemScroll">
+                <!-- 卡片一：序 · 云中月 -->
+                <div class="poem-card">
+                    <div class="poem-index reveal">壹 · 爸爸的诗</div>
+                    <div class="poem-art reveal">
+                        <div class="art-moon-crescent"></div>
+                        <div class="art-cloud c1"></div>
+                        <div class="art-cloud c2"></div>
+                    </div>
+                    <h2 class="poem-title reveal">云中月 · 耳边风</h2>
+                    <p class="poem-body reveal">
+                        这些年，爸爸把日子过成了诗。<br>
+                        湖光与荷香，明月与桂花，<br>
+                        都藏在他的字里行间。<br>
+                        今天，让我们一起读一读。
+                    </p>
+                </div>
+
+                <!-- 卡片二：行香子 · 荷塘（横排：图左诗右）-->
+                <div class="poem-card horizontal">
+                    <div class="poem-index reveal">贰 · 行香子</div>
+                    <div class="poem-art reveal">
+                        <div class="art-moon-crescent" style="top:0; left:110px; transform:scale(0.7);"></div>
+                        <div class="art-pond"></div>
+                        <div class="art-lotus l1"><div class="center"></div><div class="stem"></div></div>
+                        <div class="art-lotus l2"><div class="center"></div><div class="stem"></div></div>
+                        <div class="art-lily y1"></div>
+                        <div class="art-lily y2"></div>
+                    </div>
+                    <div class="poem-text">
+                        <h2 class="poem-title reveal">行香子</h2>
+                        <div class="poem-body reveal">
+                            <p class="stanza">信手相邀，酒浅情浓。<br>谈笑间、知与谁同。<br>湖光霭霭，水墨重重。<br>闻荷花香，痴人语，女儿红。</p>
+                            <p class="stanza">曾经执念，因何成空。<br>瞬息间云雨匆匆。<br>但求心醉，莫问西东。<br>忘身前事，云中月，耳边风。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 卡片三：鹧鸪天 · 桂月（横排：图左诗右）-->
+                <div class="poem-card horizontal">
+                    <div class="poem-index reveal">叁 · 鹧鸪天</div>
+                    <div class="poem-art reveal">
+                        <div class="art-fullmoon"></div>
+                        <div class="art-branch">
+                            <div class="twig"></div>
+                            <div class="osmanthus"></div>
+                            <div class="osmanthus"></div>
+                            <div class="osmanthus"></div>
+                            <div class="osmanthus"></div>
+                            <div class="osmanthus"></div>
+                            <div class="leaf"></div>
+                            <div class="leaf"></div>
+                            <div class="leaf"></div>
+                        </div>
+                    </div>
+                    <div class="poem-text">
+                        <h2 class="poem-title reveal">鹧鸪天</h2>
+                        <div class="poem-body reveal">
+                            <p class="stanza">常念高堂山水长，枝头明月照微凉。<br>霜华寂寂桂花瘦，小径风随隐隐香。</p>
+                            <p class="stanza">休惆怅，且倾觞。年年今夜好时光。<br>别来千里应无恙，游到中秋必有方。</p>
+                        </div>
+                        <button class="poem-next-btn reveal" onclick="startMessagePhase()">接下来，还有一份心意 →</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 页码指示 -->
+            <div class="poem-progress" id="poemProgress">
+                <span class="current" id="poemCurrent">01</span>
+                <span class="line"></span>
+                <span class="total">03</span>
+            </div>
+
+            <!-- 滑动提示 -->
+            <div class="poem-hint" id="poemHint">上下滑动，慢慢欣赏 ↓</div>
+        </div>
+
+        <!-- 第三阶段：吹蜡烛 -->
+        <div id="candle-screen">
+            <div class="stars" id="stars3"></div>
+
+            <p class="candle-text">请你吃一个赛博蛋糕</p>
+
+            <div class="cake-container">
+                <div class="candle-wrapper">
+                    <div class="flame-container" id="flameContainer">
+                        <div class="flame" id="flame"></div>
+                        <div class="smoke" id="smoke1"></div>
+                        <div class="smoke" id="smoke2"></div>
+                        <div class="smoke" id="smoke3"></div>
+                    </div>
+                    <div class="candle"></div>
+                </div>
+                <div class="cake">
+                    <!-- 奶油花边 -->
+                    <div class="cream-border-top"></div>
+
+                    <!-- 樱桃装饰 -->
+                    <div class="cherry"></div>
+                    <div class="cherry"></div>
+                    <div class="cherry"></div>
+
+                    <!-- 蓝莓装饰 -->
+                    <div class="blueberry"></div>
+                    <div class="blueberry"></div>
+                    <div class="blueberry"></div>
+
+                    <!-- 彩色糖屑 -->
+                    <div class="sprinkle"></div>
+                    <div class="sprinkle"></div>
+                    <div class="sprinkle"></div>
+                    <div class="sprinkle"></div>
+                    <div class="sprinkle"></div>
+                    <div class="sprinkle"></div>
+
+                    <!-- 奶油花点缀 -->
+                    <div class="cream-dollop"></div>
+                    <div class="cream-dollop"></div>
+                </div>
+                <div class="plate"></div>
+            </div>
+
+            <!-- 最终祝福：显示在蛋糕和按钮之间，不会重叠 -->
+            <div class="final-blessing" id="finalBlessing">
+                <h1>生日快乐</h1>
+            </div>
+
+            <div class="candle-hint" id="candleHint" onclick="blowCandle()">许好愿了，吹蜡烛吧</div>
+
+            <!-- 重新点燃按钮 -->
+            <button class="relight-btn" id="relightBtn" onclick="relightCandle()">重新点燃</button>
+        </div>
+
+        <!-- 烟花容器（fixed定位） -->
+        <div id="fireworks"></div>
+    </div>
+
+    <script>
+        // ========== 初始化星空 ==========
+        function createStars(containerId, count = 100) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            for (let i = 0; i < count; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                const size = Math.random() * 3 + 1;
+                star.style.width = size + 'px';
+                star.style.height = size + 'px';
+                star.style.animationDelay = Math.random() * 2 + 's';
+                star.style.animationDuration = (Math.random() * 2 + 1) + 's';
+                container.appendChild(star);
+            }
+        }
+
+        createStars('stars', 150);
+        createStars('stars2', 100);
+        createStars('stars3', 80);
+        createStars('starsPoem', 120);
+
+        // ========== 创建纸片碎片 ==========
+        function createConfetti() {
+            const container = document.getElementById('confetti');
+            const colors = [
+                'rgba(255, 255, 255, 0.9)',
+                'rgba(240, 240, 240, 0.8)',
+                'rgba(220, 220, 220, 0.7)',
+                'rgba(255, 250, 240, 0.85)'
+            ];
+
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+
+                    const isRect = Math.random() > 0.3;
+                    if (isRect) {
+                        confetti.style.width = (Math.random() * 15 + 8) + 'px';
+                        confetti.style.height = (Math.random() * 10 + 5) + 'px';
+                        confetti.style.borderRadius = '2px';
+                    } else {
+                        confetti.style.width = (Math.random() * 12 + 6) + 'px';
+                        confetti.style.height = confetti.style.width;
+                        confetti.style.borderRadius = '50%';
+                    }
+
+                    confetti.style.left = Math.random() * 100 + '%';
+                    confetti.style.top = '-20px';
+                    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+                    confetti.style.animationDuration = (Math.random() * 3 + 3) + 's';
+                    confetti.style.animationDelay = (Math.random() * 2) + 's';
+
+                    container.appendChild(confetti);
+
+                    setTimeout(() => {
+                        if (confetti.parentNode) confetti.remove();
+                    }, 7000);
+                }, i * 100);
+            }
+        }
+
+        setTimeout(createConfetti, 500);
+        setInterval(createConfetti, 6000);
+
+        // ========== 背景音乐控制 ==========
+        let musicPlayed = false;
+
+        function playBirthdayMusic() {
+            if (musicPlayed) return;
+            
+            const audio = document.getElementById('bgMusic');
+            audio.volume = 0.6;
+            
+            // 尝试播放
+            const playPromise = audio.play();
+            
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    console.log('🎵 背景音乐开始播放');
+                    musicPlayed = true;
+                    
+                    // 播放完毕后停止（不循环）
+                    audio.onended = () => {
+                        console.log('🎵 音乐播放完毕');
+                    };
+                }).catch(error => {
+                    console.log('🎵 自动播放被阻止，请点击页面开始播放');
+                    // 添加点击事件来播放
+                    document.addEventListener('click', function playOnce() {
+                        audio.play().then(() => {
+                            musicPlayed = true;
+                            console.log('🎵 音乐开始播放');
+                        });
+                        document.removeEventListener('click', playOnce);
+                    }, { once: true });
+                });
+            }
+        }
+
+        // ========== 阶段切换逻辑 ==========
+        // 诗歌页结束后：碎片汇聚成"生日快乐"
+        function startMessagePhase() {
+            const poemScreen = document.getElementById('poem-screen');
+            const messageScreen = document.getElementById('message-screen');
+
+            // 隐藏诗歌页（碎片页在其下方，不隐藏会被盖住，看起来像卡住）
+            poemScreen.classList.add('hidden');
+
+            setTimeout(() => {
+                messageScreen.classList.add('active');
+                createTextParticles();
+            }, 1000);
+        }
+
+        // 创建文字碎片粒子
+        function createTextParticles() {
+            const targetText = document.getElementById('targetText');
+            const container = document.getElementById('particleContainer');
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 600;
+            canvas.height = 200;
+
+            ctx.font = 'bold 72px "STXingkai", "华文行楷", "行楷", cursive';
+            ctx.fillStyle = '#000';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('闭上眼睛', canvas.width / 2, canvas.height / 2);
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            const gap = 4;
+            const particles = [];
+
+            for (let y = 0; y < canvas.height; y += gap) {
+                for (let x = 0; x < canvas.width; x += gap) {
+                    const index = (y * canvas.width + x) * 4;
+                    if (data[index + 3] > 128) {
+                        particles.push({ x, y });
+                    }
+                }
+            }
+
+            const containerRect = container.getBoundingClientRect();
+            const scaleX = containerRect.width / canvas.width;
+            const scaleY = containerRect.height / canvas.height;
+
+            particles.forEach((pos, index) => {
+                const particle = document.createElement('div');
+                particle.className = 'text-particle';
+
+                const size = gap * 0.8;
+                particle.style.width = size + 'px';
+                particle.style.height = size + 'px';
+                particle.style.borderRadius = '1px';
+
+                const startAngle = Math.random() * Math.PI * 2;
+                const startRadius = Math.max(window.innerWidth, window.innerHeight);
+                const startX = Math.cos(startAngle) * startRadius;
+                const startY = Math.sin(startAngle) * startRadius;
+
+                particle.style.left = startX + 'px';
+                particle.style.top = startY + 'px';
+
+                const targetX = pos.x * scaleX;
+                const targetY = pos.y * scaleY;
+
+                container.appendChild(particle);
+
+                setTimeout(() => {
+                    particle.style.left = targetX + 'px';
+                    particle.style.top = targetY + 'px';
+                    particle.classList.add('assembled');
+                }, index * 2 + 500);
+            });
+
+            // 文字汇聚完成后，停留片刻自动进入蛋糕页（无需操作）
+            const assembleDone = particles.length * 2 + 500 + 1500; // 最后一个粒子到位 + 停留1.5秒
+            setTimeout(() => {
+                startCandlePhase();
+            }, assembleDone);
+        }
+
+        // 进入诗歌滑动页（含"拆开惊喜"过渡动画）
+        function startPoemPhase() {
+            const introScreen = document.getElementById('intro-screen');
+            const poemScreen = document.getElementById('poem-screen');
+
+            // 防止重复触发
+            if (introScreen.classList.contains('hidden')) return;
+
+            // ① 拆开礼物的瞬间：金色礼花从按钮处绽放
+            try {
+                confetti({
+                    particleCount: 130,
+                    spread: 85,
+                    startVelocity: 38,
+                    origin: { x: 0.5, y: 0.62 },
+                    colors: ['#ffd700', '#ffec8b', '#fff8dc', '#ffdf70', '#f4e5b0'],
+                    zIndex: 200,
+                    scalar: 1.1,
+                    ticks: 220
+                });
+            } catch (e) {
+                // CDN 不可用时静默降级，不影响流程
+            }
+
+            // ② 开屏内容缩小淡出（像礼物盒被打开后收起）
+            introScreen.classList.add('leaving');
+            introScreen.classList.add('hidden');
+
+            // ③ 诗歌页淡入，首页内容依次浮现
+            setTimeout(() => {
+                poemScreen.classList.add('active');
+                initPoemScroll();
+            }, 1200);
+        }
+
+        // 诗歌页：滚动监听 + 卡片浮现动画 + 页码更新
+        let poemScrollInited = false;
+        function initPoemScroll() {
+            if (poemScrollInited) return;
+            poemScrollInited = true;
+
+            const scrollEl = document.getElementById('poemScroll');
+            const cards = scrollEl.querySelectorAll('.poem-card');
+            const currentEl = document.getElementById('poemCurrent');
+            const progressLine = document.querySelector('.poem-progress .line');
+            const hint = document.getElementById('poemHint');
+
+            // 进入视口的卡片触发浮现
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, { root: scrollEl, threshold: 0.55 });
+
+            cards.forEach(card => observer.observe(card));
+
+            // 第一张卡片立即浮现
+            setTimeout(() => cards[0].classList.add('visible'), 600);
+
+            // 更新页码 "0X —— 03"
+            scrollEl.addEventListener('scroll', () => {
+                const idx = Math.round(scrollEl.scrollTop / scrollEl.clientHeight);
+                const clamped = Math.min(Math.max(idx, 0), cards.length - 1);
+                currentEl.textContent = String(clamped + 1).padStart(2, '0');
+                if (progressLine) {
+                    progressLine.style.setProperty('--p', clamped);
+                }
+                // 滚到最后一页时隐藏提示
+                hint.style.opacity = (clamped === cards.length - 1) ? '0' : '1';
+            });
+        }
+
+        // 从诗歌页进入吹蜡烛
+        function startCandlePhase() {
+            const poemScreen = document.getElementById('poem-screen');
+            const messageScreen = document.getElementById('message-screen');
+            const candleScreen = document.getElementById('candle-screen');
+
+            // 无论从诗歌页还是碎片页进来，都把它们隐藏
+            poemScreen.classList.add('hidden');
+            messageScreen.classList.add('hidden');
+
+            setTimeout(() => {
+                candleScreen.classList.add('active');
+                playBirthdayMusic(); // 生日歌在吹蜡烛环节响起
+            }, 1000);
+        }
+
+        // ========== 吹蜡烛功能（点击触发）==========
+        function blowCandle() {
+            const flame = document.getElementById('flame');
+            const smoke1 = document.getElementById('smoke1');
+            const smoke2 = document.getElementById('smoke2');
+            const smoke3 = document.getElementById('smoke3');
+            const candleHint = document.getElementById('candleHint');
+            const relightBtn = document.getElementById('relightBtn');
+
+            // 隐藏提示文字（display:none 释放空间，让"重新点燃"顶替它的位置）
+            candleHint.style.display = 'none';
+
+            // 火焰熄灭
+            flame.classList.add('out');
+
+            // 显示烟雾
+            setTimeout(() => { smoke1.classList.add('show'); }, 300);
+            setTimeout(() => { smoke2.classList.add('show'); }, 500);
+            setTimeout(() => { smoke3.classList.add('show'); }, 700);
+
+            // 显示最终祝福和两侧烟花
+            setTimeout(() => {
+                showFinalBlessing();
+                createSideFireworks();
+                // 显示重新点燃按钮
+                relightBtn.classList.add('show');
+            }, 1500);
+        }
+
+        // 重新点燃蜡烛
+        function relightCandle() {
+            const flame = document.getElementById('flame');
+            const smoke1 = document.getElementById('smoke1');
+            const smoke2 = document.getElementById('smoke2');
+            const smoke3 = document.getElementById('smoke3');
+            const candleHint = document.getElementById('candleHint');
+            const relightBtn = document.getElementById('relightBtn');
+            const finalBlessing = document.getElementById('finalBlessing');
+
+            // 隐藏重新点燃按钮
+            relightBtn.classList.remove('show');
+
+            // 隐藏最终祝福
+            finalBlessing.classList.remove('show');
+
+            // 移除烟雾
+            smoke1.classList.remove('show');
+            smoke2.classList.remove('show');
+            smoke3.classList.remove('show');
+
+            // 重新点燃火焰
+            flame.classList.remove('out');
+
+            // 强制重绘以触发动画
+            void flame.offsetWidth;
+
+            // 显示提示文字（恢复占位）
+            setTimeout(() => {
+                candleHint.style.display = '';
+            }, 300);
+
+            // 清除现有烟花
+            document.getElementById('fireworks').innerHTML = '';
+        }
+
+        function showFinalBlessing() {
+            const blessing = document.getElementById('finalBlessing');
+            blessing.classList.add('show');
+        }
+
+        // 使用 canvas-confetti 库创建真正的爆炸式烟花
+        function createSideFireworks() {
+            // 烟花颜色配置
+            const colors = ['#ff6b9d', '#ffd700', '#00ffff', '#ff6600', '#ff00ff', '#00ff00', '#ff69b4', '#ffa500'];
+
+            // 第一波：左侧大烟花爆炸
+            setTimeout(() => {
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { x: 0.2, y: 0.5 },
+                    colors: colors.slice(0, 4),
+                    zIndex: 100
+                });
+            }, 100);
+
+            // 第二波：右侧大烟花爆炸
+            setTimeout(() => {
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { x: 0.8, y: 0.5 },
+                    colors: colors.slice(4, 8),
+                    zIndex: 100
+                });
+            }, 400);
+
+            // 第三波：中央小烟花
+            setTimeout(() => {
+                confetti({
+                    particleCount: 60,
+                    spread: 50,
+                    origin: { x: 0.5, y: 0.4 },
+                    colors: colors,
+                    zIndex: 100
+                });
+            }, 700);
+
+            // 第四波：全屏彩带雨
+            setTimeout(() => {
+                confetti({
+                    particleCount: 150,
+                    spread: 100,
+                    origin: { x: 0.5, y: 0.3 },
+                    colors: colors,
+                    zIndex: 100,
+                    ticks: 200,
+                    gravity: 0.8
+                });
+            }, 1000);
+
+            // 第五波：左右两侧同时爆发
+            setTimeout(() => {
+                // 左侧
+                confetti({
+                    particleCount: 80,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0, y: 0.6 },
+                    colors: ['#ff6b9d', '#ffd700', '#ff69b4'],
+                    zIndex: 100
+                });
+                // 右侧
+                confetti({
+                    particleCount: 80,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1, y: 0.6 },
+                    colors: ['#00ffff', '#00ff00', '#ffa500'],
+                    zIndex: 100
+                });
+            }, 1300);
+        }
+
+        // 页面加载完成
+        window.addEventListener('load', () => {
+            console.log('🎂 生日快乐页面已加载');
+            console.log('💡 提示：点击"开启生日模式"进入下一步');
+        });
+    </script>
+</body>
+</html>
